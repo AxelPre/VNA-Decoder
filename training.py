@@ -1051,7 +1051,7 @@ num_annealing_steps = 200 #number of annealing steps
 num_equilibrium_steps = 5 #number of training steps after each annealing step
 activation_function = tf.nn.elu #non-linear activation function for the 2D Tensorized RNN cell
 
-p_x=0.15
+p_x=0.10
 p_y=p_z=0
 testcode = RotSurCode(Nx)
 testcode.generate_random_error(p_x=p_x, p_y=p_y, p_z=p_z)
