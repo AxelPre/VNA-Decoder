@@ -1,7 +1,4 @@
-data/*
-!data/EWD_xzzx3_alpha1*
-plots/*
-!plots/example.pdf
+
 *__pycache__
 blossom5-v2.05.src/
 ewd/
