@@ -414,12 +414,6 @@ def canbehalf(i,j, size): #unused in this version
       return False
 
 def Ising2D_local_energies(samples, testcode):
-    """ To get the local energies of 2D spin lattice given a set of set of samples in parallel!
-    Returns: The local energies that correspond to the "samples"
-    Inputs:
-    - samples: (numsamples, Nx,Ny)
-    - Jz: (Nx,Ny,2) np of J_ij couplings
-    """
 
     numsamples = samples.shape[0]
     Nx = samples.shape[1]
@@ -440,11 +434,6 @@ def Ising2D_local_energies(samples, testcode):
                 local_energies[x] += 100*np.absolute(newcode.plaquette_defects[i,j]-oldcode.plaquette_defects[i,j])+np.sum(samples[x,:,:])
     return local_energies
 
-"""In our code, we need to use a tensordot operation to define our tensorized RNN. For speed purposes, we use a modified version of TensorFlow's tensordot operation, which is faster the one implemented in Tensorflow, and that is taken from the TensorNetwork package https://github.com/google/TensorNetwork
-
-"""
-
-"""A modified version of TensorFlow's tensordot operation."""
 
 from typing import Any, Optional, Union, Text, Sequence, Tuple, List
 
@@ -455,57 +444,9 @@ def tensordot(tf,
               b,
               axes,
               name: Optional[Text] = None) -> Tensor:
-  r"""Tensor contraction of a and b along specified axes.
-  Tensordot (also known as tensor contraction) sums the product of elements
-  from `a` and `b` over the indices specified by `a_axes` and `b_axes`.
-  The lists `a_axes` and `b_axes` specify those pairs of axes along which to
-  contract the tensors. The axis `a_axes[i]` of `a` must have the same dimension
-  as axis `b_axes[i]` of `b` for all `i` in `range(0, len(a_axes))`. The lists
-  `a_axes` and `b_axes` must have identical length and consist of unique
-  integers that specify valid axes for each of the tensors.
-  This operation corresponds to `numpy.tensordot(a, b, axes)`.
-  Example 1: When `a` and `b` are matrices (order 2), the case `axes = 1`
-  is equivalent to matrix multiplication.
-  Example 2: When `a` and `b` are matrices (order 2), the case
-  `axes = [[1], [0]]` is equivalent to matrix multiplication.
-  Example 3: Suppose that \\(a_{ijk}\\) and \\(b_{lmn}\\) represent two
-  tensors of order 3. Then, `contract(a, b, [[0], [2]])` is the order 4 tensor
-  \\(c_{jklm}\\) whose entry
-  corresponding to the indices \\((j,k,l,m)\\) is given by:
-  \\( c_{jklm} = \sum_i a_{ijk} b_{lmi} \\).
-  In general, `order(c) = order(a) + order(b) - 2*len(axes[0])`.
-  Args:
-    tf: The TensorFlow module. This must be passed in instead of imported
-      since we don't assume users have TensorFlow installed.
-    a: `Tensor` of type `float32` or `float64`.
-    b: `Tensor` with the same type as `a`.
-    axes: Either a scalar `N`, or a list or an `int32` `Tensor` of shape [2, k].
-      If axes is a scalar, sum over the last N axes of a and the first N axes of
-      b in order. If axes is a list or `Tensor` the first and second row contain
-      the set of unique integers specifying axes along which the contraction is
-      computed, for `a` and `b`, respectively. The number of axes for `a` and
-      `b` must be equal.
-    name: A name for the operation (optional).
-  Returns:
-    A `Tensor` with the same type as `a`.
-  Raises:
-    ValueError: If the shapes of `a`, `b`, and `axes` are incompatible.
-    IndexError: If the values in axes exceed the rank of the corresponding
-      tensor.
-  """
 
   def _tensordot_should_flip(contraction_axes: List[int],
                               free_axes: List[int]) -> bool:
-    """Helper method to determine axis ordering.
-    We minimize the average distance the indices would have to move under the
-    transposition.
-    Args:
-      contraction_axes: The axes to be contracted.
-      free_axes: The free axes.
-    Returns:
-      should_flip: `True` if `contraction_axes` should be moved to the left,
-        `False` if they should be moved to the right.
-    """
     # NOTE: This will fail if the arguments contain any Tensors.
     if contraction_axes and free_axes:
       return bool(np.mean(contraction_axes) < np.mean(free_axes))
@@ -513,10 +454,6 @@ def tensordot(tf,
     return False
 
   def _tranpose_if_necessary(tensor: Tensor, perm: List[int]) -> Tensor:
-    """Like transpose(), but avoids creating a new tensor if possible.
-    Although the graph optimizer should kill trivial transposes, it is best not
-    to add them in the first place!
-    """
     if perm == list(range(len(perm))):
       return tensor
 
@@ -524,8 +461,6 @@ def tensordot(tf,
 
   def _reshape_if_necessary(tensor: Tensor,
                             new_shape: List[int]) -> Tensor:
-    """Like reshape(), but avoids creating a new tensor if possible.
-    Assumes shapes are both fully specified."""
     cur_shape = tensor.get_shape().as_list()
     if (len(new_shape) == len(cur_shape) and
         all(d0 == d1 for d0, d1 in zip(cur_shape, new_shape))):
@@ -536,27 +471,6 @@ def tensordot(tf,
   def _tensordot_reshape(
       a: Tensor, axes: Union[Sequence[int], Tensor], is_right_term=False
   ) -> Tuple[Tensor, Union[List[int], Tensor], Optional[List[int]], bool]:
-    """Helper method to perform transpose and reshape for contraction op.
-    This method is helpful in reducing `math_ops.tensordot` to `math_ops.matmul`
-    using `array_ops.transpose` and `array_ops.reshape`. The method takes a
-    tensor and performs the correct transpose and reshape operation for a given
-    set of indices. It returns the reshaped tensor as well as a list of indices
-    necessary to reshape the tensor again after matrix multiplication.
-    Args:
-      a: `Tensor`.
-      axes: List or `int32` `Tensor` of unique indices specifying valid axes of
-       `a`.
-      is_right_term: Whether `a` is the right (second) argument to `matmul`.
-    Returns:
-      A tuple `(reshaped_a, free_dims, free_dims_static, transpose_needed)`
-      where `reshaped_a` is the tensor `a` reshaped to allow contraction via
-      `matmul`, `free_dims` is either a list of integers or an `int32`
-      `Tensor`, depending on whether the shape of a is fully specified, and
-      free_dims_static is either a list of integers and None values, or None,
-      representing the inferred static shape of the free dimensions.
-      `transpose_needed` indicates whether `reshaped_a` must be transposed,
-      or not, when calling `matmul`.
-    """
 
     if a.get_shape().is_fully_defined() and isinstance(axes, (list, tuple)):
       shape_a = a.get_shape().as_list()
@@ -596,12 +510,6 @@ def tensordot(tf,
       axes = tf.convert_to_tensor(axes, dtype=tf.dtypes.int32, name="axes")
       axes = tf.where(axes >= 0, axes, axes + rank_a)
       free, _ = tf.compat.v1.setdiff1d(tf.range(rank_a), axes)
-      # Matmul does not accept tensors for its transpose arguments, so fall
-      # back to the previous, fixed behavior.
-      # NOTE(amilsted): With a suitable wrapper for `matmul` using e.g. `case`
-      #   to match transpose arguments to tensor values, we could also avoid
-      #   unneeded tranposes in this case at the expense of a somewhat more
-      #   complicated graph. Unclear whether this would be beneficial overall.
       flipped = is_right_term
       perm = (
           tf.concat([axes, free], 0) if flipped else tf.concat([free, axes], 0))
@@ -651,10 +559,6 @@ def tensordot(tf,
               "Different number of contraction axes 'a' and 'b', %s != %s." %
               (len(a_axes), len(b_axes)))
 
-        # The contraction indices do not need to be permuted.
-        # Sort axes to avoid unnecessary permutations of a.
-        # NOTE: This fails if either a_axes and b_axes contain Tensors.
-        # pylint: disable=len-as-condition
         if len(a_axes) > 0:
           a_axes, b_axes = list(zip(*sorted(zip(a_axes, b_axes))))
 
@@ -685,14 +589,6 @@ def tensordot(tf,
       product.set_shape(a_free_dims_static + b_free_dims_static)
       
     return product
-
-"""## **2D Tensorised RNN Cell**
-
-To do variational annealing on the 2D Edwards-Anderson model, we use 1D Tensorized RNNs. The recurrent step for the Tensorized RNN is instead given by:
-
-$${h}_{ij} = f\left([{\sigma}^{ \intercal }_{i-1,j};{\sigma}^{ \intercal }_{i,j-1}] T_{ij} [h_{i-1,j};h_{i,j-1}] + {b}_{ij} \right),$$
-where $\{T_{ij}\}_{i=1,j=1}^{N_x,Ny}$ are site-dependent tensors that encode non-weight sharing, to take account of the randomness in the couplings $J_{ij}$ of the Edwards-Anderson model.
-"""
 
 class MDTensorizedRNNCell(tf.compat.v1.nn.rnn_cell.RNNCell):
     def __init__(self, num_units = None, activation = None, name=None, dtype = None, reuse=None):
@@ -753,40 +649,15 @@ class MDTensorizedRNNCell(tf.compat.v1.nn.rnn_cell.RNNCell):
         state_mul3 = tensordot(tf, inputstate_mul_W3, self.W3, axes=[[1,2],[1,2]])
         state_mul4 = tensordot(tf, inputstate_mul_W4, self.W4, axes=[[1,2],[1,2]])
 
-
-        #preact = state_mul0 + state_mul1 + state_mul2 + state_mul3 + state_mul4 + self.b
         preact = state_mul0 + state_mul1 + state_mul2 + state_mul3 + state_mul4 + self.b
-        output = self.activation(preact) # [batch_sz, num_units] C
+        output = self.activation(preact)
 
         new_state = output
 
         return output, new_state
 
-"""## **RNN Wavefunction Class**
-
-Here, we define the 2D RNNwavefunction class, which contains the **sample** method that allows to sample configurations autoregressively from the RNN and the **log_probability** method which allows to estimate the log-probability of a set of configurations.
-
-Note that the log probabilities $\log P_{\lambda}(\sigma)$ are used here because we assume that the ground state wavefunction has non-negative amplitudes. Thus, we can write $\Psi_{\lambda}(\sigma) = \sqrt{P_{\lambda}(\sigma)}$, where $\lambda$ stands for the variational parameters.
-
-The equation **rnn_output, rnn_state = self.rnn(inputs, rnn_state)** performs the recurrent step.
-
-Here we use a zigzag path to generate the 2D samples as explained in https://arxiv.org/abs/2002.02973 and https://arxiv.org/abs/2101.10154.
-
-"""
-
 class MDRNNWavefunction(object):
     def __init__(self,systemsize_x = None, systemsize_y = None,cell=None,activation=None,num_units = None,scope='RNNWavefunction',seed = 111):
-        """
-            systemsize_x, systemsize_y:  int
-                         number of sites in x, y directions
-            cell:        a tensorflow RNN cell
-            num_units:   int
-                         number of memory units
-            scope:       str
-                         the name of the name-space scope
-            activation:  activation of the RNN cell
-            seed:        pseudo-random number generator
-        """
         self.graph=tf.Graph()
         self.scope=scope #Label of the RNN wavefunction
         self.Nx=systemsize_x 
@@ -809,24 +680,6 @@ class MDRNNWavefunction(object):
               #self.dense2 = [tf.compat.v1.layers.Dense(2,activation=tf.nn.softmax,name='wf_dense2'+str(i), dtype = tf.float64) for i in range(self.Nx*self.Ny)]
 
     def sample(self,numsamples,inputdim):
-        """
-            generate samples from a probability distribution parametrized by a recurrent network
-            ------------------------------------------------------------------------
-            Parameters:
-
-            numsamples:      int
-                             number of samples to be produced
-            inputdim:        int
-                             hilbert space dimension
-
-            ------------------------------------------------------------------------
-            Returns:         a tuple (samples,log-probs)
-
-            samples:         tf.Tensor of shape (numsamples,systemsize_x, systemsize_y)
-                             the samples in integer encoding
-            log-probs        tf.Tensor of shape (numsamples,)
-                             the log-probability of each sample
-        """
 
         with self.graph.as_default(): #Call the default graph, used if willing to create multiple graphs.
             with tf.compat.v1.variable_scope(self.scope,reuse=tf.compat.v1.AUTO_REUSE):
@@ -906,22 +759,6 @@ class MDRNNWavefunction(object):
         return self.samples,self.log_probs
 
     def log_probability(self,samples,inputdim):
-        """
-            calculate the log-probabilities of ```samples``
-            ------------------------------------------------------------------------
-            Parameters:
-
-            samples:         tf.Tensor
-                             a tf.placeholder of shape (number of samples,systemsize_x, systemsize_y)
-                             containing the input samples in integer encoding
-            inputdim:        int
-                             dimension of the input space
-
-            ------------------------------------------------------------------------
-            Returns:
-            log-probs        tf.Tensor of shape (number of samples,)
-                             the log-probability of each sample
-            """
         with self.graph.as_default():
 
             self.inputdim=inputdim
@@ -1002,20 +839,6 @@ class MDRNNWavefunction(object):
 
             return self.log_probs
 
-"""## **Hyperparameters**
-
-Here we define the hyperparameters used in our variational annealing protocol.
-
-**Note:**
-
-If $B_{x0} = 0$, then this code will run Variational Classical Annealing (VCA).
-
-If $T_0 = 0$, then this code will run Variational Quantum Annealing (VQA).
-
-If both are zero, then this algorithm will correspond to classical quantum optimization (CQO).
-
-For more details, please check Ref. https://arxiv.org/abs/2101.10154.
-"""
 
 Nx = 3 #x-size
 Ny = 3 #y-size
@@ -1043,11 +866,6 @@ num_steps = num_annealing_steps*num_equilibrium_steps + num_warmup_steps
 
 print("\nNumber of annealing steps = {0}".format(num_annealing_steps))
 print("Number of training steps = {0}".format(num_steps))
-
-"""## **Initializing and Building the Graph**
-
-Here we define the 2D RNNWavefunction class, along with the optimizer, gradients and placeholders needed for the optimization of the RNN.
-"""
 
 # Intitializing the RNN (with only one layer)-----------
 MDRNNWF = MDRNNWavefunction(systemsize_x = Nx, systemsize_y = Ny ,num_units = num_units,cell=MDTensorizedRNNCell, activation = activation_function, seed = seed) #contains the graph with the RNNs
@@ -1090,21 +908,13 @@ with tf.compat.v1.variable_scope(MDRNNWF.scope,reuse=tf.compat.v1.AUTO_REUSE):
         #For initialization
         init=tf.compat.v1.global_variables_initializer()
         initialize_parameters = tf.compat.v1.initialize_all_variables()
-#----------------------------------------------------------------
 
-"""Here we initialize the tensorflow session:"""
-
-#Starting Session------------
-#GPU management
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 
 sess=tf.compat.v1.Session(graph=MDRNNWF.graph, config=config)
 sess.run(init)
 
-#Loading previous trainings----------
-    ### To be implemented
-#------------------------------------
 
 def failrate(sols,testcode):
   num_samples = sols.shape[0]
@@ -1139,26 +949,7 @@ def individual_failrate(sample,testcode):
                   return False
       return True
 
-"""## **Running variational annealing**
 
-In this part of the code, we implement our variational annealing protocol.
-
-Here, we follow a linear schedule for temperature:
-
-$$ T(t) = T_0 (1-t/N_{\rm annealing}) $$
-and for transverse magnetic field:
-$$ B_x(t) = B_{x0} (1-t/N_{\rm annealing}) $$
-"""
-
-def check_num_defects(size):
-    temp = int((size-1)*((size-1)/2+1))
-    return 2**(temp)
-
-def check_defects(size,defect_num):
-      testcode = RotSurCode(size)
-      ## hardcoded for now
-      #if defect_num=1:
-        #testcode.plaquette_defects[]
 def magic(numList):
 
     s = ''.join(map(str, numList.astype(int)))
