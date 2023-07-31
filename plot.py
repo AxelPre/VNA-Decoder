@@ -45,15 +45,15 @@ for file_path in file_path_list:
     df = df.append(pd.DataFrame({"p": [p_error], "d": size, "P_e": P_e,
         "nbr_pts": int(len(data)/2), "method": params['method'], "size": params['size']}))
 
-#df['std'] = df['P_e']*(1 - df['P_e'])/df['nbr_pts']
-#df['std'] = df['std'].apply(lambda x: sqrt(x))
+df['std'] = df['P_e']*(1 - df['P_e'])/df['nbr_pts']
+df['std'] = df['std'].apply(lambda x: sqrt(x))
 fig = plt.figure(figsize=(4, 3))
 ax = fig.add_subplot()
 
 ps = df['p'].to_numpy()
 P_es = df['P_e'].to_numpy()
-#err = df['std'].to_numpy()
-plt.plot(ps,P_es)
+err = df['std'].to_numpy()
+plt.errorbar(ps,P_es,err)
 
 ##############################################################
 
@@ -63,7 +63,6 @@ file_path_list = sorted(glob(file_prefix + '*'),
                         key=lambda a: float(a.split("_")[3][:-3]))
 
 df = pd.DataFrame()
-sns.set_style("darkgrid")
 for file_path in file_path_list:
 
     data = pd.read_pickle(file_path).to_numpy().ravel()
@@ -94,13 +93,13 @@ for file_path in file_path_list:
     df = df.append(pd.DataFrame({"p": [p_error], "d": size, "P_e": P_e,
                                  "nbr_pts": int(len(data) / 2), "method": params['method'], "size": params['size']}))
 
-# df['std'] = df['P_e']*(1 - df['P_e'])/df['nbr_pts']
-# df['std'] = df['std'].apply(lambda x: sqrt(x))
+df['std'] = df['P_e']*(1 - df['P_e'])/df['nbr_pts']
+df['std'] = df['std'].apply(lambda x: sqrt(x))
 
 ps = df['p'].to_numpy()
 P_es = df['P_e'].to_numpy()
-# err = df['std'].to_numpy()
-plt.plot(ps, P_es)
+err = df['std'].to_numpy()
+plt.errorbar(ps,P_es,err)
 ############################################################
 file_prefix = 'data/EWD_reference_size3'
 
