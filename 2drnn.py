@@ -411,17 +411,6 @@ class MDTensorizedRNNCell(tf.compat.v1.nn.rnn_cell.RNNCell):
 
 class MDRNNWavefunction(object):
     def __init__(self,systemsize_x = None, systemsize_y = None,cell=None,activation=None,num_units = None,scope='RNNWavefunction',seed = 111):
-        """
-            systemsize_x, systemsize_y:  int
-                         number of sites in x, y directions
-            cell:        a tensorflow RNN cell
-            num_units:   int
-                         number of memory units
-            scope:       str
-                         the name of the name-space scope
-            activation:  activation of the RNN cell
-            seed:        pseudo-random number generator
-        """
         self.graph=tf.Graph()
         self.scope=scope #Label of the RNN wavefunction
         self.Nx=systemsize_x
@@ -444,25 +433,6 @@ class MDRNNWavefunction(object):
               #self.dense2 = [tf.compat.v1.layers.Dense(2,activation=tf.nn.softmax,name='wf_dense2'+str(i), dtype = tf.float64) for i in range(self.Nx*self.Ny)]
 
     def sample(self,numsamples,inputdim):
-        """
-            generate samples from a probability distribution parametrized by a recurrent network
-            ------------------------------------------------------------------------
-            Parameters:
-
-            numsamples:      int
-                             number of samples to be produced
-            inputdim:        int
-                             hilbert space dimension
-
-            ------------------------------------------------------------------------
-            Returns:         a tuple (samples,log-probs)
-
-            samples:         tf.Tensor of shape (numsamples,systemsize_x, systemsize_y)
-                             the samples in integer encoding
-            log-probs        tf.Tensor of shape (numsamples,)
-                             the log-probability of each sample
-        """
-
         with self.graph.as_default(): #Call the default graph, used if willing to create multiple graphs.
             with tf.compat.v1.variable_scope(self.scope,reuse=tf.compat.v1.AUTO_REUSE):
 
@@ -541,22 +511,6 @@ class MDRNNWavefunction(object):
         return self.samples,self.log_probs
 
     def log_probability(self,samples,inputdim):
-        """
-            calculate the log-probabilities of ```samples``
-            ------------------------------------------------------------------------
-            Parameters:
-
-            samples:         tf.Tensor
-                             a tf.placeholder of shape (number of samples,systemsize_x, systemsize_y)
-                             containing the input samples in integer encoding
-            inputdim:        int
-                             dimension of the input space
-
-            ------------------------------------------------------------------------
-            Returns:
-            log-probs        tf.Tensor of shape (number of samples,)
-                             the log-probability of each sample
-            """
         with self.graph.as_default():
 
             self.inputdim=inputdim
@@ -730,10 +684,6 @@ if __name__ == '__main__':
             init = tf.compat.v1.global_variables_initializer()
             initialize_parameters = tf.compat.v1.initialize_all_variables()
     # ----------------------------------------------------------------
-    # ----------------------------------------------------------------
-
-    """Here we initialize the tensorflow session:"""
-
     # Starting Session------------
     # GPU management
     config = tf.compat.v1.ConfigProto()

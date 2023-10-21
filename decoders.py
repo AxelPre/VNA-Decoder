@@ -58,7 +58,6 @@ def EWD_alpha(init_code, pz_tilde, alpha, steps, pz_tilde_sampling=None, onlysho
 
     return (np.divide(eqdistr, sum(eqdistr)) * 100)
 
-
 if __name__ == '__main__':
     from src.rotated_surface_model import RotSurCode
     import time
@@ -87,7 +86,7 @@ if __name__ == '__main__':
         
         ground_state = init_code.define_equivalence_class()
         print('Ground state:', ground_state)
-        
+
         #init_code.qubit_matrix = init_code.apply_stabilizers_uniform()
         #init_qubit = np.copy(init_code.qubit_matrix)
 

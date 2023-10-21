@@ -4,7 +4,6 @@ from numba import njit
 import random as rand
 import matplotlib.pyplot as plt
 
-
 class RotSurCode():
     nbr_eq_classes = 4
 

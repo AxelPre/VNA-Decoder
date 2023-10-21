@@ -195,6 +195,7 @@ if __name__ == '__main__':
             'TOPS': 10,
             'eps': 0.01,
             'onlyshortest': only_shortest}
+
     # Steps is a function of code size L
     params.update({'steps': int(5*params['size']**5)})
     
